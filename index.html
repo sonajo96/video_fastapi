@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Transcriber</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 50%;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        h3 {
+            margin-top: 20px;
+        }
+
+        p {
+            white-space: pre-wrap;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        /* Transcription progress styles */
+        .transcribing {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .done {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>YouTube Video Transcriber</h2>
+
+        <!-- YouTube URL Input -->
+        <input type="text" id="videoUrl" placeholder="Enter YouTube URL">
+        <button onclick="transcribeVideo()">Transcribe</button>
+
+        <h3>Transcript:</h3>
+        <p id="transcript" class="transcribing"></p>
+
+        <!-- Question Input -->
+        <h3>Ask a Question</h3>
+        <input type="text" id="question" placeholder="Ask something about the video">
+        <button onclick="askQuestion()">Ask</button>
+
+        <h3>Answer:</h3>
+        <p id="answer"></p>
+    </div>
+
+    <script>
+        const apiUrl = "http://127.0.0.1:8000";  // FastAPI server URL
+
+        // Function to send YouTube URL for transcription
+        // Function to send YouTube URL for transcription
+async function transcribeVideo() {
+    const videoUrl = document.getElementById("videoUrl").value;
+    const transcriptElement = document.getElementById("transcript");
+
+    if (!videoUrl) {
+        alert("Please enter a YouTube URL!");
+        return;
+    }
+
+    // Indicate transcription is in progress
+    transcriptElement.innerText = "🔄 Transcribing... please wait";
+    transcriptElement.classList.add("transcribing");
+    transcriptElement.classList.remove("done");
+
+    fetch(`${apiUrl}/transcribe/`, {
+        "headers": {
+            "accept": "*/*",
+            "content-type": "application/json",
+            "sec-fetch-mode": "cors",
+        },
+        "body": JSON.stringify({ url: videoUrl }),
+        "method": "POST",
+        "mode": "cors",
+        "credentials": "omit"
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.transcript) {
+            transcriptElement.innerText = `✅Transcription completed!\n\n${data.transcript}`;
+            transcriptElement.classList.add("done");
+            transcriptElement.classList.remove("transcribing");
+            alert("Transcription successful!");
+        } else {
+            transcriptElement.innerText = "Transcription failed.";
+            transcriptElement.classList.remove("transcribing");
+            alert("Transcription Failed: " + (data.error || "Unknown error"));
+        }
+    })
+    .catch(error => {
+        transcriptElement.innerText = " Transcription failed due to an error: " + error.message;
+        transcriptElement.classList.remove("transcribing");
+       
+    });
+}
+        // Function to ask a question based on the transcript
+        async function askQuestion() {
+            const question = document.getElementById("question").value;
+            if (!question) {
+                alert("Please enter a question!");
+                return;
+            }
+
+            const response = await fetch(`${apiUrl}/ask/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: question }),
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                alert("Error: " + data.error);
+            } else {
+                document.getElementById("answer").innerText = data.answer;
+            }
+        }
+    </script>
+</body>
+</html>
